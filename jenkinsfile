@@ -32,9 +32,12 @@ pipeline {
       }
    }
    post {
-        always {
+       success {
             archiveArtifacts artifacts: 'build//*.xml', fingerprint: true, onlyIfSuccessful: true
             junit 'build//*.xml'
+            cleanWs()
+       }
+        failure {
             cleanWs()
         }
     }
