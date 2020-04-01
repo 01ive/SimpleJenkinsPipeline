@@ -1,0 +1,41 @@
+pipeline {
+   agent any
+
+   stages {
+      stage('Clone') {
+         steps {
+            // Get some code from a GitHub repository
+            // git 'https://github.com/01ive/SimpleCppWorkflows.git'
+            git branch: 'feature/jenkins', url: 'https://github.com/01ive/SimpleCppWorkflows.git'
+
+            // Run Maven on a Unix agent.
+            //sh "mvn -Dmaven.test.failure.ignore=true clean package"
+
+            // To run Maven on a Windows agent, use
+            // bat "mvn -Dmaven.test.failure.ignore=true clean package"
+         }
+      }
+      stage('CMake') {
+          steps {
+              bat 'cmake -S . -B .\\build -G "MinGW Makefiles"'
+          }
+      }
+      stage('Build') {
+          steps {
+              bat 'cmake --build .\\build\\'
+          }
+      }
+      stage('Test') {
+          steps {
+              bat 'cd build && ctest'
+          }
+      }
+   }
+   post {
+        always {
+            archiveArtifacts artifacts: 'build//*.xml', fingerprint: true, onlyIfSuccessful: true
+            junit 'build//*.xml'
+            cleanWs()
+        }
+    }
+}
