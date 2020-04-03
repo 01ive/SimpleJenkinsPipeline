@@ -1,33 +1,41 @@
+library identifier: 'SimpleJenkinsPipelineLib@master', retriever: modernSCM(
+    [$class: 'GitSCMSource', 
+    credentialsId: 'GitHub', 
+    remote: 'https://github.com/01ive/SimpleJenkinsPipelineLib.git'])
+
 pipeline {
    agent any
 
    stages {
+      stage('Get setup') {
+          steps {
+              script {
+                  my_branch = setup.get_branch()
+                  my_url = setup.get_url()
+              }
+          }
+      }
       stage('Clone') {
          steps {
-            // Get some code from a GitHub repository
-            // git 'https://github.com/01ive/SimpleCppWorkflows.git'
-            git branch: 'feature/jenkins', url: 'https://github.com/01ive/SimpleCppWorkflows.git'
-
-            // Run Maven on a Unix agent.
-            //sh "mvn -Dmaven.test.failure.ignore=true clean package"
-
-            // To run Maven on a Windows agent, use
-            // bat "mvn -Dmaven.test.failure.ignore=true clean package"
+            //git branch: 'feature/jenkins', url: 'https://github.com/01ive/SimpleCppWorkflows.git'
+            script {
+                clone.clone(my_branch, my_url)
+            }
          }
       }
       stage('CMake') {
           steps {
-              bat 'cmake -S . -B .\\build -G "MinGW Makefiles"'
+              myprebuild()
           }
       }
       stage('Build') {
           steps {
-              bat 'cmake --build .\\build\\'
+              mybuild()
           }
       }
       stage('Test') {
           steps {
-              bat 'cd build && ctest'
+              mytest()
           }
       }
    }
@@ -42,3 +50,4 @@ pipeline {
         }
     }
 }
+
