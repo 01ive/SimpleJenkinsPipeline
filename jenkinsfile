@@ -1,53 +1,65 @@
 library identifier: 'SimpleJenkinsPipelineLib@master', retriever: modernSCM(
-    [$class: 'GitSCMSource', 
-    credentialsId: 'GitHub', 
-    remote: 'https://github.com/01ive/SimpleJenkinsPipelineLib.git'])
+		[$class: 'GitSCMSource', 
+		credentialsId: 'GitHub', 
+		remote: 'https://github.com/01ive/SimpleJenkinsPipelineLib.git'])
 
-pipeline {
-   agent any
+			  properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10'))])
 
-   stages {
-      stage('Get setup') {
-          steps {
-              script {
-                  my_branch = setup.get_branch()
-                  my_url = setup.get_url()
-              }
-          }
-      }
-      stage('Clone') {
-         steps {
-            //git branch: 'feature/jenkins', url: 'https://github.com/01ive/SimpleCppWorkflows.git'
-            script {
-                clone.clone(my_branch, my_url)
-            }
-         }
-      }
-      stage('CMake') {
-          steps {
-              myprebuild()
-          }
-      }
-      stage('Build') {
-          steps {
-              mybuild()
-          }
-      }
-      stage('Test') {
-          steps {
-              mytest()
-          }
-      }
-   }
-   post {
-       success {
-            archiveArtifacts artifacts: 'build//*.xml', fingerprint: true, onlyIfSuccessful: true
-            junit 'build//*.xml'
-            cleanWs()
-       }
-        failure {
-            cleanWs()
-        }
-    }
-}
+			  pipeline {
+				  agent {
+					  node {
+						  label 'master'
+							  //customWorkspace env.WORKSPACE
+							  customWorkspace 'D:\\workspace\\Jenkins\\workspace'
+					  }
+				  }
 
+				  stages {
+					  stage('Get setup') {
+						  steps {
+							  script {
+								  my_branch = setup.get_branch()
+									  my_url = setup.get_url()
+							  }
+						  }
+					  }
+					  stage('Clone') {
+						  steps {
+							  script {
+								  clone.clone(my_branch, my_url)
+							  }
+						  }
+					  }
+					  stage('CMake') {
+						  steps {
+							  myprebuild()
+						  }
+					  }
+					  stage('Build') {
+						  steps {
+							  mybuild()
+						  }
+					  }
+					  stage('Test') {
+						  steps {
+							  mytest()  
+						  }
+					  }
+				  }
+				  post {
+					  success {
+						  archiveArtifacts artifacts: 'build//*.xml', fingerprint: true, onlyIfSuccessful: true
+							  junit 'build//*.xml'
+							  cleanWs()
+							  dir("${workspace}@tmp") {
+								  deleteDir()
+							  }
+					  }
+					  failure {
+						  cleanWs()
+							  dir("${workspace}@tmp") {
+								  deleteDir()
+							  }
+					  }
+				  }
+			  }
