@@ -1,36 +1,43 @@
 pipeline {
-   agent any
+    agent any
 
-   stages {
-      stage('Clone') {
-         steps {
-            // Get some code from a GitHub repository
-            git branch: 'master', url: 'https://github.com/01ive/SimpleCppWorkflows.git'
-         }
-      }
-      stage('CMake') {
-          steps {
-              bat 'cmake -S . -B .\\build -G "MinGW Makefiles"'
-          }
-      }
-      stage('Build') {
-          steps {
-              bat 'cmake --build .\\build\\'
-          }
-      }
-      stage('Test') {
-          steps {
-              bat 'cd build && ctest'
-          }
-      }
-   }
-   post {
-       success {
+    stages {
+        stage('Clone') {
+            steps {
+                // Get code from a GitHub repository
+                git branch: 'master', url: 'https://github.com/01ive/SimpleCppWorkflows.git'
+            }
+        }
+        stage('CMake') {
+            steps {
+                // my command used to generate the project (using CMake)
+                bat 'cmake -S . -B .\\build -G "MinGW Makefiles"'
+            }
+        }
+        stage('Build') {
+            steps {
+                // my command used to build the project (using CMake)
+                bat 'cmake --build .\\build\\'
+            }
+        }
+        stage('Test') {
+            steps {
+                // my command to run the test (using CMake)
+                bat 'cd build && ctest'
+            }
+        }
+    }
+    post {
+        success {
+            // Tell to Jenkins to keep tests results as build artifacts 
             archiveArtifacts artifacts: 'build//*.xml', fingerprint: true, onlyIfSuccessful: true
+            // Tell Jenkins to display tests results
             junit 'build//*.xml'
+            // Clean local workspace
             cleanWs()
-       }
+        }
         failure {
+            // Clean local workspace
             cleanWs()
         }
     }
