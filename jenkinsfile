@@ -1,65 +1,81 @@
 library identifier: 'SimpleJenkinsPipelineLib@master', retriever: modernSCM(
-		[$class: 'GitSCMSource', 
-		credentialsId: 'GitHub', 
-		remote: 'https://github.com/01ive/SimpleJenkinsPipelineLib.git'])
+    [$class: 'GitSCMSource', 
+    credentialsId: 'GitHub', 
+    remote: 'https://github.com/01ive/SimpleJenkinsPipelineLib.git'])
 
-			  properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10'))])
+properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10'))])
 
-			  pipeline {
-				  agent {
-					  node {
-						  label 'master'
-							  //customWorkspace env.WORKSPACE
-							  customWorkspace 'D:\\workspace\\Jenkins\\workspace'
-					  }
-				  }
+def cleanAllWs() {
+    cleanWs()
+    dir("${workspace}@tmp") {
+        deleteDir()
+    }
+}
 
-				  stages {
-					  stage('Get setup') {
-						  steps {
-							  script {
-								  my_branch = setup.get_branch()
-									  my_url = setup.get_url()
-							  }
-						  }
-					  }
-					  stage('Clone') {
-						  steps {
-							  script {
-								  clone.clone(my_branch, my_url)
-							  }
-						  }
-					  }
-					  stage('CMake') {
-						  steps {
-							  myprebuild()
-						  }
-					  }
-					  stage('Build') {
-						  steps {
-							  mybuild()
-						  }
-					  }
-					  stage('Test') {
-						  steps {
-							  mytest()  
-						  }
-					  }
-				  }
-				  post {
-					  success {
-						  archiveArtifacts artifacts: 'build//*.xml', fingerprint: true, onlyIfSuccessful: true
-							  junit 'build//*.xml'
-							  cleanWs()
-							  dir("${workspace}@tmp") {
-								  deleteDir()
-							  }
-					  }
-					  failure {
-						  cleanWs()
-							  dir("${workspace}@tmp") {
-								  deleteDir()
-							  }
-					  }
-				  }
-			  }
+pipeline {
+    agent {
+    node {
+        label 'master'
+        customWorkspace 'D:\\workspace\\Jenkins\\workspace'
+    }
+  }
+
+   stages {
+      stage('Get setup') {
+          steps {
+            script {
+              my_branch = setup.get_branch()
+              my_url = setup.get_url()
+            }
+          }
+      }
+      stage('Clone') {
+         steps {
+                script {
+                clone.clone(my_branch, my_url)
+            }
+         }
+      }
+      stage('CMake') {
+          steps {
+                myprebuild()
+          }
+      }
+      stage('Build') {
+          steps {
+                mybuild()
+          }
+      }
+      stage('Test') {
+          steps {
+                mytest()  
+          }
+      }
+      stage('Coverage analysis') {
+          steps {
+              mycoverage()
+              bat label: '', script: '"C://Program Files//7-Zip//"7z a .//build//html_coverage.7z .//build//html_coverage'
+          }
+      }
+   }
+   post {
+       success {
+                archiveArtifacts artifacts: 'build//*.xml', fingerprint: true, onlyIfSuccessful: true
+                archiveArtifacts artifacts: 'build//*.7z', fingerprint: true, onlyIfSuccessful: true
+                
+                junit 'build//*.xml'
+                publishHTML target: [
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: false,
+                    keepAll: true,
+                    reportDir: 'build//html_coverage',
+                    reportFiles: 'index.html',
+                    reportName: 'LCov Report'
+                    ]
+                cleanAllWs()
+           }
+        failure {
+            cleanAllWs()
+        }
+   }
+}
